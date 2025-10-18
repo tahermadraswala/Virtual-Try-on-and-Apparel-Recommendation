@@ -49,10 +49,6 @@ Create a virtual environment:python -m venv venv
 source venv/bin/activate  # On Linux/macOS
 
 
-Verify Python version:python --version  # Should show 3.13.7
-
-
-
 3. Install Dependencies
 
 Backend Dependencies:
@@ -116,7 +112,7 @@ python main.py
 
 
 The Flask server starts on http://localhost:5000. Keep this terminal open.
-Note: First run downloads ~5GB of model weights (FashionCLIP, Stable Diffusion).
+
 
 
 Start the Frontend:
@@ -142,73 +138,3 @@ Click "Try On" to generate a virtual try-on image (currently uses Stable Diffusi
 
 
 
-Running on Google Colab
-To run in Google Colab (useful for free GPU access):
-
-Create a new notebook at colab.research.google.com.
-Set runtime to GPU: Runtime > Change runtime type > GPU.
-Copy-paste and run the following cells (requires a free ngrok account for public access):
-
-# Install dependencies
-!pip install -q flask streamlit pyngrok torch transformers diffusers pillow numpy scikit-learn requests
-
-# Download Kaggle dataset
-from google.colab import files
-uploaded = files.upload()  # Upload kaggle.json
-!mkdir -p ~/.kaggle
-!cp kaggle.json ~/.kaggle/
-!chmod 600 ~/.kaggle/kaggle.json
-!kaggle datasets download -d paramaggarwal/fashion-product-images-small
-!unzip -q fashion-product-images-small.zip
-
-# Create apparel_images and copy 100 images
-import os
-import shutil
-os.makedirs('apparel_images', exist_ok=True)
-source_dir = 'images'
-image_files = [f for f in os.listdir(source_dir) if f.endswith('.jpg')][:100]
-for file in image_files:
-    shutil.copy(os.path.join(source_dir, file), 'apparel_images')
-
-# Create backend.py
-%%writefile backend.py
-# [Insert your main.py code here, with BASE_DIR = Path("/content") and apparel_dir = BASE_DIR / "apparel_images"]
-
-# Create frontend.py
-%%writefile frontend.py
-# [Insert your frontend.py code here, with rec_img = Image.open(f"apparel_images/{rec}")]
-
-# Run Flask in background
-import subprocess
-subprocess.Popen(["python", "backend.py"])
-import time
-time.sleep(5)
-
-# Set up ngrok and run Streamlit
-from pyngrok import ngrok
-!ngrok authtoken YOUR_NGROK_AUTHTOKEN  # Replace with your token
-ngrok.kill()
-get_ipython().system_raw('streamlit run frontend.py &')
-public_url = ngrok.connect(8501, "http")
-print(f"Streamlit app at: {public_url}")
-
-
-Access the app via the ngrok URL (e.g., https://xxxx.ngrok-free.app).
-
-Troubleshooting
-
-ModuleNotFoundError: Ensure venv is activated and dependencies are installed (pip install -r frontend/requirements.txt for frontend, additional packages for backend).
-FileNotFoundError for apparel_images/: Verify root\backend\apparel_images\ exists with .jpg or .png files. Move images there or update paths in main.py and frontend.py.
-Model Loading Errors: Ensure ~5GB disk space and stable internet for downloading FashionCLIP/Stable Diffusion. Use CPU if GPU memory is low (device = "cpu" in main.py).
-Port Conflicts: If localhost:5000 is in use, change to port=5001 in main.py and update frontend.py URLs.
-Colab Timeouts: Sessions reset after ~12 hours. Save apparel_images/ to Google Drive for persistence.
-
-Future Improvements
-
-Replace Stable Diffusion with IDM-VTON for realistic try-on.
-Cache apparel_images/ embeddings to disk to speed up backend startup.
-Add category filtering (e.g., using styles.csv from Kaggle dataset).
-Deploy to a cloud platform (e.g., Heroku, AWS) for production use.
-
-License
-MIT License (or specify your preferred license).
